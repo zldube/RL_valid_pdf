@@ -41,8 +41,6 @@
 
 # And I validate the PDF document "UMS025"
 
-
-
 import pdfplumber
 import sys
 import re
@@ -73,7 +71,7 @@ def validate_pdf(fulltext, pdf):
     except PdfReadError:
         print("Invalid PDF file")
     else:
-        pass
+        pass # or is continue better?
 
     #Validating pdf has data 
     if pdf:
@@ -88,52 +86,46 @@ def validate_pdf(fulltext, pdf):
     else:
         print("No data found")
 
-def validate_p45(fulltext, p45_indicators):
-
-    # Validate presence of P45 indicators
-    for indicator in p45_indicators:
-        if indicator not in fulltext:
-            print(f"P45 validation failed: Missing '{indicator}'")
-            return False
-    print("P45 validation passed")
-    return True
+def validate_p45(fulltext, expected_values):
+    """Validate P45 section contains expected fields and values"""
+    validations = {}
+    
+    for key, value in expected_values.items():
+        result = validate_field(key, value, fulltext)
+        validations.update(result)
+    
+    return validations
 
 def validate_field(label, expected, text):
     if expected in text:
-        return {label: "PASS"}
+        return {label: "PASS, is valid"}
     else:
         return {label: f"FAIL — Expected '{expected}'"}
     
-def validate_pdftext(pdf_path):
-    pass
+def cross_validate(full_text, p45_text, expected_values):
+    """Ensure P45 values match the rest of the PDF"""
+    mismatches = {}
+    
+    for key, value in expected_values.items():
+        in_full = value in full_text
+        in_p45 = value in p45_text
+        
+        if in_full != in_p45:
+            mismatches[key] = f"Mismatch — Full doc: {in_full}, P45: {in_p45}"
+    
+    return mismatches
 
 def main():
     pdf_path = sys.argv[1]
 
-    text = extract_text(pdf_path)
+    # Extract full PDF text and P45 section
+    full_text = extract_text(pdf_path)
+    p45_text = extract_text(pdf_path, start_page=6)
 
-    validate_pdf(text, pdf_path)
-
-    # Check for P45 specific text
-    p45_indicators = [
-        "PAYE Reference",
-        "NI Number",
-        "Title",
-        "Surname",
-        "First Name",
-        "Leaving Date",
-        "Tax Code",
-        "Total Pay to Date",
-        "Total Tax to Date",
-        "Date of Birth",
-        "Address",
-        "Postcode",
-    ]
-
-    p45_text = extract_text(pdf_path, start_page=5)
-    validate_p45(text, p45_indicators)
-
-    validations = {}
+    # Validate PDF file integrity and content
+    if not validate_pdf(full_text, pdf_path):
+        print(json.dumps({"PDF Validation": "FAIL"}))
+        return
 
     # Fields to validate
     expected_values = {
@@ -151,9 +143,15 @@ def main():
         "Postcode": "W2 4BA"
     }
 
-    for key, value in expected_values.items():
-        result = validate_field(key, value, text)
-        validations.update(result)
+# Validate P45 section
+    p45_validations = validate_p45(p45_text, expected_values)
+
+    # Cross-validate: ensure P45 matches full document
+    mismatches = cross_validate(full_text, p45_text, expected_values)
+
+    # Combine results
+    validations = p45_validations.copy()
+    validations.update(mismatches)
 
     # Output JSON so WDIO can parse the result
     print(json.dumps(validations))
