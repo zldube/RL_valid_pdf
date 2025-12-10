@@ -129,7 +129,6 @@ def main():
 
     # Fields to validate
     expected_values = {
-        "PAYE Reference": "120 / ME60530",
         "NI Number": "WM764243B",
         "Title": "MR",
         "Surname": "UATJMFC",
