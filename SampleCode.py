@@ -82,9 +82,11 @@ def validate_pdf(fulltext, pdf):
         file1.close()
 
         print("PDF has data \n")
+        return True
     
     else:
         print("No data found")
+        return False
 
 def validate_p45(fulltext, expected_values):
     """Validate P45 section contains expected fields and values"""
@@ -125,7 +127,7 @@ def main():
     # Validate PDF file integrity and content
     if not validate_pdf(full_text, pdf_path):
         print(json.dumps({"PDF Validation": "FAIL"}))
-        return
+        return 
 
     # Fields to validate
     expected_values = {
