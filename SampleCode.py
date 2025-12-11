@@ -113,7 +113,7 @@ def cross_validate(full_text, p45_text, expected_values):
         in_p45 = value in p45_text
         
         if in_full != in_p45:
-            mismatches[key] = f"Mismatch — Full doc: {in_full}, P45: {in_p45}"
+            mismatches[key] = f"Mismatch - Full doc: {in_full}, P45: {in_p45}"
     
     return mismatches
 
