@@ -163,30 +163,36 @@ def format_results(validations):
     return output
 
 def main():
+    """Validate using an existing .json file only (no text extraction)."""
     if len(sys.argv) < 2:
-        print("Usage: python SampleCode.py <pdf_path>", file=sys.stderr)
+        print("Usage: python SampleCode.py <pdf_path>  (requires <pdf>.json next to the pdf)", file=sys.stderr)
         sys.exit(2)
 
     pdf_path = sys.argv[1]
     json_filename = pdf_path.replace(".pdf", ".json")
 
-    # Use existing JSON if present, otherwise extract and save JSON
+    # Do NOT extract text here — require JSON to be present
+    if not os.path.exists(json_filename):
+        print(f"ERROR: JSON not found: {json_filename}\nCreate the JSON (once) and re-run.", file=sys.stderr)
+        sys.exit(2)
+
     pdf_data = load_json(json_filename)
     if pdf_data is None:
-        pdf_data = extract_pdf_to_json(pdf_path)
-        save_json(pdf_data, json_filename)
+        print(f"ERROR: Failed to load JSON: {json_filename}", file=sys.stderr)
+        sys.exit(2)
 
-    # Use JSON content as source of truth (do NOT re-extract text)
-    full_text = pdf_data.get("full_document", "")
-    p45_text = pdf_data.get("p45_section", "")
+    # Source-of-truth text from JSON
+    full_text = pdf_data.get("full_document", "") or ""
+    p45_text = pdf_data.get("p45_section", "") or ""
+    pre5_text = pdf_data.get("pre5_section", "") or ""
 
-    # Validate PDF file integrity and that extraction produced data
-    if not validate_pdf(full_text, pdf_path):
-        print(json.dumps({"PDF Validation": "FAIL"}))
-        return 
+    # Basic sanity check
+    if not (full_text.strip() or p45_text.strip()):
+        print(json.dumps({"PDF Validation": "FAIL - empty JSON content"}))
+        return
 
-    # Fields to validate
-    expected_values = {
+    # --- Test definitions (adjust values as needed) ---
+    expected_p45values = {
         "NI Number": "WM764243B",
         "Title": "MR",
         "Surname": "UATJMFC",
@@ -197,21 +203,74 @@ def main():
         "Total Tax to Date": "85,305.15",
         "Date of Birth": "01 01 1995",
         "Address": "AVENUE STREET",
-        "Postcode": "W2 4BA"
+        "Postcode": "W2 4BA",
+        "Month Number": "8"
     }
 
-    # Validate P45 section using JSON content
-    p45_validations = validate_p45(p45_text, expected_values)
+    Additional_Validations = [
+        "26 November 2025",
+        "Plan Value: £190,664.73",
+        "Cash Withdrawal: £190,664.73",
+        "Plan value after withdrawal: £0.00",
+        "Customer ID: 7700049486",
+        "Pension Plan: 1000059054L",
+    ]
 
-    # Cross-validate only where it makes sense (value appears in full doc)
-    mismatches = cross_validate(full_text, p45_text, expected_values)
+    expected_comparisons = {
+        "NI Number": "WM764243B",
+        "Title": "MR",
+        "First Name": "TDMJMFC",
+        "Surname": "UATJMFC",
+        "Leaving Date": "27 11 2025",
+        "Tax Code": "1250L",
+        "Address": "AVENUE STREET",
+        "Postcode": "W2 4BA",
+        "Date": "29 11 2025"
+    }
 
-    # Combine results
-    validations = p45_validations.copy()
-    validations.update(mismatches)
+    # --- Run validations ---
+    # Validate only P45 area (pages after 5)
+    p45_validations = validate_p45(p45_text, expected_p45values)
 
-    # Print human-friendly results to stderr and machine JSON to stdout
-    print(format_results(validations), file=sys.stderr)
+    # Validate additional values expected on pages 1-5
+    pre5_validations = {}
+    for val in Additional_Validations:
+        pre5_validations[val] = "PASS, is valid" if val in pre5_text else f"FAIL — Expected '{val}' on pages 1-5"
+
+    # Compare expected keys between full PDF and P45
+    comparison_validations = {}
+    for key, val in expected_comparisons.items():
+        in_full = val in full_text
+        in_p45 = val in p45_text
+        if in_full and in_p45:
+            comparison_validations[key] = "PASS, present in both full PDF and P45"
+        elif in_full and not in_p45:
+            comparison_validations[key] = "Mismatch — Present in full PDF but missing from P45"
+        elif (not in_full) and in_p45:
+            comparison_validations[key] = "Notice — Present in P45 only (not in full PDF)"
+        else:
+            comparison_validations[key] = f"FAIL — Expected '{val}' not found anywhere"
+
+    # Combine results into a single machine-readable dict
+    validations = {
+        "P45 Validations": p45_validations,
+        "Pages 1-5 Additional Validations": pre5_validations,
+        "P45 vs Full PDF Comparisons": comparison_validations
+    }
+
+    # Human-friendly prints to stderr
+    print(format_results(p45_validations), file=sys.stderr)
+    # Print comparisons and pre5 succinctly
+    print("\n📋 P45 vs Full PDF COMPARISONS\n" + "="*50 + "\n", file=sys.stderr)
+    for k, v in comparison_validations.items():
+        prefix = "✓" if "PASS" in v else "✗"
+        print(f"{prefix} {k}: {v}", file=sys.stderr)
+    print("\n📋 Pages 1-5 ADDITIONAL VALIDATIONS\n" + "="*50 + "\n", file=sys.stderr)
+    for k, v in pre5_validations.items():
+        prefix = "✓" if "PASS" in v else "✗"
+        print(f"{prefix} {k}: {v}", file=sys.stderr)
+
+    # Machine-readable JSON on stdout (for your test runner)
     print(json.dumps(validations))
 
 if __name__ == "__main__":
