@@ -45,49 +45,63 @@ import pdfplumber
 import sys
 import re
 import json
+import os
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
+from datetime import datetime
 
-def extract_text(pdf_path, start_page=1):
-    """
-    Extract text from a PDF starting at a 1-based page number.
-    Default start_page=1 (extract whole document). To check text after page 5,
-    pass start_page=6.
-    """
-    full_text = ""
-    with pdfplumber.open(pdf_path) as pdf:
-        for index, page in enumerate(pdf.pages, start=1):
-            if index < start_page:
-                continue
-            txt = page.extract_text()
-            if txt:
-                full_text += txt + "\n"
-    return full_text
 
-def validate_pdf(fulltext, pdf):
-    #Validated file type as pdf
-    try:
-        PdfReader(pdf)
-    except PdfReadError:
-        print("Invalid PDF file")
-    else:
-        pass # or is continue better?
-
-    #Validating pdf has data 
-    if pdf:
-        file1 = open("pdf_info.txt", "w+")
-        file1.writelines(fulltext)
-
-        print(file1.read()) #(internal purposes)
-        file1.close()
-
-        print("PDF has data \n")
-        return True
+def extract_pdf_to_json(pdf_path):
+    """Extract all PDF data into a structured JSON object (plus layout)."""
+    pdf_data = {
+        "filename": os.path.basename(pdf_path),
+        "extraction_date": datetime.now().isoformat(),
+        "full_document": extract_text(pdf_path),
+        "p45_section": extract_text(pdf_path, start_page=6),
+        "tables": [],
+        "layout": extract_pdf_layout(pdf_path)  # ▶ NEW
+    }
     
-    else:
-        print("No data found")
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_num, page in enumerate(pdf.pages, start=1):
+            tables = page.extract_tables()
+            if tables:
+                for table in tables:
+                    pdf_data["tables"].append({
+                        "page": page_num,
+                        "data": table
+                    })
+
+    return pdf_data
+
+
+def save_json(data, filename):
+    """Save data as JSON file"""
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    print(f"✓ JSON saved to {filename}", file=sys.stderr)
+
+def load_json(filename):
+    """Load existing JSON if present"""
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+def validate_pdf(fulltext, pdf_path):
+    """Validate file is readable PDF and has content"""
+    try:
+        PdfReader(pdf_path)
+    except PdfReadError:
+        print("Invalid PDF file", file=sys.stderr)
         return False
 
+    if fulltext and fulltext.strip():
+        return True
+    else:
+        print("No data found in PDF extraction", file=sys.stderr)
+        return False
+    
 def validate_p45(fulltext, expected_values):
     """Validate P45 section contains expected fields and values"""
     validations = {}
@@ -114,6 +128,8 @@ def cross_validate(full_text, p45_text, expected_values):
         
         if in_full != in_p45:
             mismatches[key] = f"Mismatch - Full doc: {in_full}, P45: {in_p45}"
+        if in_full and not in_p45:
+            mismatches[key] = f"Mismatch — Full doc: {in_full}, P45: {in_p45}"
     
     return mismatches
 
@@ -147,13 +163,24 @@ def format_results(validations):
     return output
 
 def main():
+    if len(sys.argv) < 2:
+        print("Usage: python SampleCode.py <pdf_path>", file=sys.stderr)
+        sys.exit(2)
+
     pdf_path = sys.argv[1]
+    json_filename = pdf_path.replace(".pdf", ".json")
 
-    # Extract full PDF text and P45 section
-    full_text = extract_text(pdf_path)
-    p45_text = extract_text(pdf_path, start_page=6)
+    # Use existing JSON if present, otherwise extract and save JSON
+    pdf_data = load_json(json_filename)
+    if pdf_data is None:
+        pdf_data = extract_pdf_to_json(pdf_path)
+        save_json(pdf_data, json_filename)
 
-    # Validate PDF file integrity and content
+    # Use JSON content as source of truth (do NOT re-extract text)
+    full_text = pdf_data.get("full_document", "")
+    p45_text = pdf_data.get("p45_section", "")
+
+    # Validate PDF file integrity and that extraction produced data
     if not validate_pdf(full_text, pdf_path):
         print(json.dumps({"PDF Validation": "FAIL"}))
         return 
@@ -173,20 +200,18 @@ def main():
         "Postcode": "W2 4BA"
     }
 
-    # Validate P45 section
+    # Validate P45 section using JSON content
     p45_validations = validate_p45(p45_text, expected_values)
 
-    # Cross-validate: ensure P45 matches full document
+    # Cross-validate only where it makes sense (value appears in full doc)
     mismatches = cross_validate(full_text, p45_text, expected_values)
 
     # Combine results
     validations = p45_validations.copy()
     validations.update(mismatches)
 
-    # Print formatted output
-    print(format_results(validations))
-
-    # Output JSON so WDIO can parse the result
+    # Print human-friendly results to stderr and machine JSON to stdout
+    print(format_results(validations), file=sys.stderr)
     print(json.dumps(validations))
 
 if __name__ == "__main__":
