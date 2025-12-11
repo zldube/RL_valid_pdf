@@ -117,6 +117,35 @@ def cross_validate(full_text, p45_text, expected_values):
     
     return mismatches
 
+def format_results(validations):
+    """Format validation results as a neat list"""
+    output = "\n📋 PDF VALIDATION RESULTS\n"
+    output += "=" * 50 + "\n"
+    
+    passed = []
+    failed = []
+    
+    for key, value in validations.items():
+        if "PASS" in value:
+            passed.append(f"✓ {key}: {value}")
+        else:
+            failed.append(f"✗ {key}: {value}")
+    
+    # Print passed validations
+    if passed:
+        output += "PASSED:\n"
+        for item in passed:
+            output += f"  {item}\n"
+    
+    # Print failed validations
+    if failed:
+        output += "\nFAILED:\n"
+        for item in failed:
+            output += f"  {item}\n"
+    
+    output += "=" * 50 + "\n"
+    return output
+
 def main():
     pdf_path = sys.argv[1]
 
@@ -144,7 +173,7 @@ def main():
         "Postcode": "W2 4BA"
     }
 
-# Validate P45 section
+    # Validate P45 section
     p45_validations = validate_p45(p45_text, expected_values)
 
     # Cross-validate: ensure P45 matches full document
@@ -153,6 +182,9 @@ def main():
     # Combine results
     validations = p45_validations.copy()
     validations.update(mismatches)
+
+    # Print formatted output
+    print(format_results(validations))
 
     # Output JSON so WDIO can parse the result
     print(json.dumps(validations))
