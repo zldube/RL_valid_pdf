@@ -49,17 +49,15 @@ import os
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from datetime import datetime
-
+from extract_to_json import extract_pdf_lines_layout
 
 def extract_pdf_to_json(pdf_path):
     """Extract all PDF data into a structured JSON object (plus layout)."""
     pdf_data = {
         "filename": os.path.basename(pdf_path),
         "extraction_date": datetime.now().isoformat(),
-        "full_document": extract_text(pdf_path),
-        "p45_section": extract_text(pdf_path, start_page=6),
         "tables": [],
-        "layout": extract_pdf_layout(pdf_path)  # ▶ NEW
+        "layout": extract_pdf_lines_layout(pdf_path)
     }
     
     with pdfplumber.open(pdf_path) as pdf:

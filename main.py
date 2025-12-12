@@ -16,6 +16,7 @@ def main():
 
     # Step 1: Load cached JSON or extract fresh data
     pdf_data = load_json(json_filename)
+    
     if pdf_data is None:
         pdf_data = extract_pdf_to_json(pdf_path)
         save_json(pdf_data, json_filename)
