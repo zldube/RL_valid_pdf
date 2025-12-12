@@ -49,7 +49,7 @@ import os
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from datetime import datetime
-from extract_to_json import extract_pdf_lines_layout
+from RL_valid_pdf.json_work.extract_to_json import extract_pdf_lines_layout
 
 def extract_pdf_to_json(pdf_path):
     """Extract all PDF data into a structured JSON object (plus layout)."""

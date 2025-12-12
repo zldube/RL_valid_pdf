@@ -1,0 +1,102 @@
+{
+  "doc_type": "UMS025_boxes",
+  "units": "normalized",
+  "pages": [
+    {
+      "page_num": 0,
+      "fields": [
+        {
+          "name": "box_0_9",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.03191801977363651,
+            0.16150328389969515,
+            0.30774467429769714,
+            0.284941344512118
+          ],
+          "extractor": "words",
+          "parsers": []
+        },
+        {
+          "name": "box_0_10",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.023518540885837425,
+            0.3286368972536285,
+            0.9801414664185922,
+            0.36571208965028407
+          ],
+          "extractor": "words",
+          "parsers": []
+        },
+        {
+          "name": "box_0_11",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.023518540885837425,
+            0.3696124024713363,
+            0.642893314929397,
+            0.41203648759717343
+          ],
+          "extractor": "words",
+          "parsers": []
+        },
+        {
+          "name": "box_0_12",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.023518540885837425,
+            0.4195912367186624,
+            0.6420601854652513,
+            0.454797470317379
+          ],
+          "extractor": "words",
+          "parsers": []
+        },
+        {
+          "name": "box_0_13",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.02519843666339724,
+            0.5359962791194032,
+            0.6366500987492446,
+            0.6828560448251421
+          ],
+          "extractor": "words",
+          "parsers": []
+        },
+        {
+          "name": "box_0_14",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.02519843666339724,
+            0.6889426033651046,
+            0.6351982356993028,
+            0.7636267899633081
+          ],
+          "extractor": "words",
+          "parsers": []
+        }
+      ],
+      "tables": []
+    },
+    {
+      "page_num": 1,
+      "fields": [
+        {
+          "name": "box_1_0",
+          "annotation_type": "RectangleDrawn",
+          "box": [
+            0.04367729021655522,
+            0.1914298239846003,
+            0.6309689668374383,
+            0.2885047597388018
+          ],
+          "extractor": "words",
+          "parsers": []
+        }
+      ],
+      "tables": []
+    }
+  ]
+}

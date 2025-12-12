@@ -16,7 +16,7 @@ def validate_pdf(fulltext, pdf_path):
     
     return True
 
-def validate_field(label, expected, text):
+def validate_field(label, expected, text): #
     if expected in text:
         return {label: "PASS, is valid"}
     else:

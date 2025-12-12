@@ -4,7 +4,7 @@ from datetime import datetime
 from json_SL import load_json, save_json
 from validations import validate_pdf, validate_p45, cross_validate
 from formatting import format_results
-from extract_to_json import extract_pdf_to_json  
+from RL_valid_pdf.json_work.extract_to_json import extract_pdf_to_json  
 
 def main():
     if len(sys.argv) < 2:
@@ -22,11 +22,11 @@ def main():
         save_json(pdf_data, json_filename)
 
     # Step 2: Access fields
-    full_text = pdf_data.get("full_document", "")
+    full_text = pdf_data.get("full_document", "") #change to first half - 
     p45_text = pdf_data.get("p45_section", "")
 
     # Step 3: Validate the extracted PDF data
-    if not validate_pdf(full_text, pdf_path):
+    if not validate_pdf(full_text, pdf_path): #
         print(json.dumps({"PDF Validation": "FAIL"}))
         return
 
