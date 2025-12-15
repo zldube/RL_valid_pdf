@@ -1,20 +1,14 @@
 
 # validations.py
-# Validation helpers: full-document existence and per-box position checks.
-
 from typing import Dict, List
 
 
 def _norm_label(label: str, aliases: Dict[str, str]) -> str:
-    # Normalize labels via alias mapping (e.g., "Last Name" -> "Surname").
-    if label in aliases:
-        return aliases[label]
-    return label
+    return aliases.get(label, label)
 
 
 def full_doc_checks(expected_values: Dict[str, str], full_text: str) -> List[dict]:
-    # Ensure each expected value appears somewhere in the full extracted text.
-    checks = []
+    checks: List[dict] = []
     corpus = full_text or ""
     for label, value in expected_values.items():
         name = f"{label}__exists"
@@ -35,25 +29,38 @@ def box_checks(
     box_mapping: Dict[str, List[str]],
     aliases: Dict[str, str] | None = None
 ) -> List[dict]:
-    # Validate that the right values are inside the right boxes.
-    # box_mapping keys are actual box names in the extraction JSON (e.g., "box_0_1").
-    # aliases map friendly labels to canonical expected_values keys.
-    checks = []
+    checks: List[dict] = []
     aliases = aliases or {}
 
+    # Basic type guards to prevent NoneType failures
+    if not isinstance(expected_values, dict):
+        checks.append({"name": "expected_values__type", "pass": False, "message": "expected_values is not a dict"})
+        return checks
+    if not isinstance(box_mapping, dict):
+        checks.append({"name": "box_mapping__type", "pass": False, "message": "box_mapping is not a dict"})
+        return checks
+    if not isinstance(boxes, dict):
+        checks.append({"name": "boxes__type", "pass": False, "message": "boxes is not a dict"})
+        return checks
+
     for box_name, labels in box_mapping.items():
-        box_text = (boxes.get(box_name, {}) or {}).get("raw_text", "")
-        if box_text is None:
-            box_text = ""
+        box_text = (boxes.get(box_name, {}) or {}).get("raw_text", "") or ""
+
+        # Confirm presence of the box in extraction
         if box_name not in boxes:
             checks.append({
                 "name": f"{box_name}__box_present",
                 "pass": False,
                 "message": f"Box '{box_name}' missing from extraction JSON"
             })
-            # Still continue to report missing label checks for visibility
         else:
             checks.append({"name": f"{box_name}__box_present", "pass": True})
+
+        # Normalize labels to an iterable list
+        if labels is None:
+            labels = []
+        elif not isinstance(labels, list):
+            labels = list(labels)
 
         for label in labels:
             canon = _norm_label(label, aliases)
@@ -67,7 +74,7 @@ def box_checks(
 
             exp_val = expected_values[canon]
             name = f"{canon}__in_{box_name}"
-            if exp_val and exp_val in box_text:
+            if exp_val and (exp_val in box_text):
                 checks.append({"name": name, "pass": True})
             else:
                 checks.append({
@@ -75,4 +82,5 @@ def box_checks(
                     "pass": False,
                     "message": f"Expected '{exp_val}' not found in {box_name}"
                                })
+    return checks
 

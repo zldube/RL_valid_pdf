@@ -1,29 +1,22 @@
 
 # json_work/python_files/extract_boxes_to_json.py
-# Extract text within normalized-box regions defined by a template JSON.
-# Exposes functions only; orchestrated by main.py.
-
 from pathlib import Path
 from typing import Dict, List
 import json
-
-# pdfplumber is expected to be available in the runtime environment.
-import pdfplumber  # type: ignore
+import pdfplumber 
 
 
 def _denorm(box: List[float], w: float, h: float) -> tuple:
-    # Convert normalized [x0,y0,x1,y1] into absolute coordinates for this page.
     return (box[0] * w, box[1] * h, box[2] * w, box[3] * h)
 
 
 def _intersects(b: tuple, wdict: Dict) -> bool:
-    # Axis-aligned rectangle intersection: box b vs word dict from pdfplumber.
     x0, y0, x1, y1 = b
     return not (wdict["x1"] < x0 or wdict["x0"] > x1 or wdict["bottom"] < y0 or wdict["top"] > y1)
 
 
 def extract_to_json(pdf_path: str, template_path: str, out_path: Path, overwrite: bool = True) -> Path:
-    # Perform extraction and write JSON to out_path.
+    # Load template
     with open(template_path, "r", encoding="utf-8") as f:
         template = json.load(f)
 
@@ -34,8 +27,9 @@ def extract_to_json(pdf_path: str, template_path: str, out_path: Path, overwrite
         "full_text": ""
     }
 
+    # Extract content
     with pdfplumber.open(pdf_path) as pdf:
-        # Compose full_text only for pages enumerated in template (first two pages).
+        # Full text (first two pages per template)
         full_text_parts = []
         for page_entry in template.get("pages", []):
             pnum = page_entry["page_num"]
@@ -43,7 +37,7 @@ def extract_to_json(pdf_path: str, template_path: str, out_path: Path, overwrite
             full_text_parts.append(t)
         extraction["full_text"] = "\n".join(full_text_parts)
 
-        # Extract text in each box.
+        # Boxes
         for page_entry in template.get("pages", []):
             pnum = page_entry["page_num"]
             page = pdf.pages[pnum]
@@ -63,9 +57,9 @@ def extract_to_json(pdf_path: str, template_path: str, out_path: Path, overwrite
                     "box_denorm": [x0, y0, x1, y1]
                 }
 
+    # Write JSON
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists() and not overwrite:
-        # Auto-suffix to avoid accidental overwrite if requested.
         i = 1
         while True:
             alt = out_path.with_name(out_path.stem + f"_{i}").with_suffix(".json")
