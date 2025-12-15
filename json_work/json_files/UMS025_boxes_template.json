@@ -6,7 +6,7 @@
       "page_num": 0,
       "fields": [
         {
-          "name": "box_0_9",
+          "name": "box_0_1",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.03191801977363651,
@@ -18,7 +18,7 @@
           "parsers": []
         },
         {
-          "name": "box_0_10",
+          "name": "box_0_2",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.023518540885837425,
@@ -30,7 +30,7 @@
           "parsers": []
         },
         {
-          "name": "box_0_11",
+          "name": "box_0_3",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.023518540885837425,
@@ -42,7 +42,7 @@
           "parsers": []
         },
         {
-          "name": "box_0_12",
+          "name": "box_0_4",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.023518540885837425,
@@ -54,7 +54,7 @@
           "parsers": []
         },
         {
-          "name": "box_0_13",
+          "name": "box_0_5",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.02519843666339724,
@@ -66,7 +66,7 @@
           "parsers": []
         },
         {
-          "name": "box_0_14",
+          "name": "box_0_6",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.02519843666339724,
@@ -84,7 +84,7 @@
       "page_num": 1,
       "fields": [
         {
-          "name": "box_1_0",
+          "name": "box_0_7",
           "annotation_type": "RectangleDrawn",
           "box": [
             0.04367729021655522,

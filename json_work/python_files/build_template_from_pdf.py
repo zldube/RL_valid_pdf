@@ -1,31 +1,27 @@
 
-# #!/usr/bin/env python3
-# """
-# Build a JSON template from a PDF using ONLY drawn rectangles (vector path 're').
-# - Ignores highlights / other annotation types.
-# - Processes ONLY the first 2 pages.
-# - Stores normalized coordinates (0..1) so later extraction is robust.
+# json_work/python_files/build_template_from_pdf.py
+# Build a JSON template from rectangles drawn in a "boxes" PDF.
+# Exposes functions only; orchestrated by main.py.
 
-# Output:
-# - Writes to ../json_files/<pdf_basename>_template.json relative to this script.
-# - Expects ../json_files to already exist (no folder creation).
-# """
-
-import json
-import argparse
 from pathlib import Path
-import fitz  # PyMuPDF
+from typing import Dict, List
+import json
+
+# PyMuPDF (fitz) is expected to be available in the runtime environment.
+import fitz  # type: ignore
 
 
-def normalize_rect(rect, page_w, page_h):
+def _normalize_rect(rect, page_w: float, page_h: float) -> List[float]:
+    # Convert absolute rect to normalized [x0, y0, x1, y1] in 0..1 range.
     return [rect.x0 / page_w, rect.y0 / page_h, rect.x1 / page_w, rect.y1 / page_h]
 
 
-def build_template_first_two_pages(pdf_path: str):
+def build_template_first_two_pages(pdf_path: str) -> Dict:
+    # Create a template dict from the first two pages of a "boxes" PDF.
     doc = fitz.open(pdf_path)
     pages_to_process = min(2, len(doc))
     template = {
-        "doc_type": Path(pdf_path).stem,
+        "doc_type": Path(pdf_path).stem.replace("_boxes", ""),
         "units": "normalized",
         "pages": []
     }
@@ -35,23 +31,23 @@ def build_template_first_two_pages(pdf_path: str):
         w, h = page.rect.width, page.rect.height
         page_entry = {"page_num": page_index, "fields": [], "tables": []}
 
-        # Scan drawn shapes and keep rectangles ('re') with a stroke width (outline rectangle).
-        for idx, d in enumerate(page.get_drawings()):
+        for idx, d in enumerate(page.get_drawings() or []):
             rect = d.get("rect")
             width = d.get("width")
             items = d.get("items", [])
             if rect is None or width is None:
                 continue
-            # Keep only rectangles (path command 're')
+
+            # Keep only rectangles (path command 're') with non-trivial area.
             is_rect = any(it[0] == "re" for it in items)
             if not is_rect:
                 continue
-            # Skip tiny boxes / lines (heuristic threshold)
+
             area = (rect.x1 - rect.x0) * (rect.y1 - rect.y0)
             if area < 1500:
                 continue
 
-            box_norm = normalize_rect(rect, w, h)
+            box_norm = _normalize_rect(rect, w, h)
             page_entry["fields"].append({
                 "name": f"box_{page_index}_{idx}",
                 "annotation_type": "RectangleDrawn",
@@ -65,41 +61,11 @@ def build_template_first_two_pages(pdf_path: str):
     return template
 
 
-def resolve_output_path_in_json_files(pdf_path: str) -> Path:
-    # ../json_files/<pdf_basename>_template.json
-    script_dir = Path(__file__).resolve().parent
-    json_files_dir = (script_dir / ".." / "json_files").resolve()
-    if not json_files_dir.exists():
-        raise FileNotFoundError(
-            f"Expected output folder does not exist: {json_files_dir}\n"
-            f"Create it before running."
-        )
-    base = Path(pdf_path).stem
-    return json_files_dir / f"{base}_template.json"
-
-
-def main():
-    ap = argparse.ArgumentParser(
-        description="Build JSON template from drawn rectangles on first 2 pages."
-    )
-    ap.add_argument("--pdf", required=True, help="Path to the PDF with drawn boxes.")
-    args = ap.parse_args()
-
-    pdf_arg = str(Path(args.pdf))
-    template = build_template_first_two_pages(pdf_arg)
-
-    # Quick sanity warnings
-    for p in template["pages"]:
-        names = [f["name"] for f in p["fields"]]
-        dups = {n for n in names if n and names.count(n) > 1}
-        if dups:
-            print(f"[WARN] Page {p['page_num']} duplicate field names: {sorted(dups)}")
-
-    out_path = resolve_output_path_in_json_files(pdf_arg)
+def write_template_for_boxes_pdf(pdf_path: str, out_path: Path) -> Path:
+    # Build and write the template JSON to out_path.
+    template = build_template_first_two_pages(pdf_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(template, f, indent=2)
-    print(f"[OK] Wrote template to: {out_path}")
+    return out_path
 
-
-if __name__ == "__main__":
-    main()
