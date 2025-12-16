@@ -56,7 +56,7 @@ def box_checks(
         else:
             checks.append({"name": f"{box_name}__box_present", "pass": True})
 
-        # Normalize labels to an iterable list
+        # Normalise labels to an iterable list
         if labels is None:
             labels = []
         elif not isinstance(labels, list):
