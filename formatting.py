@@ -7,7 +7,7 @@ from typing import Dict, List
 
 def format_summary(checks: List[dict]) -> str:
     # Build a readable PASS/FAIL summary from a list of check dicts.
-    header = "\n📋 PDF VALIDATION RESULTS\n" + "=" * 60 + "\n"
+    header = "\nPDF VALIDATION RESULTS\n" + "-" * 60 + "\n"
     passed_lines = []
     failed_lines = []
 
@@ -15,10 +15,10 @@ def format_summary(checks: List[dict]) -> str:
         name = c.get("name", "unknown_check")
         ok = bool(c.get("pass"))
         if ok:
-            passed_lines.append(f"  ✓ {name}: PASS")
+            passed_lines.append(f"  {name}: PASS")
         else:
             msg = c.get("message") or "FAIL"
-            failed_lines.append(f"  ✗ {name}: {msg}")
+            failed_lines.append(f"  {name}: {msg}")
 
     out = [header]
     if passed_lines:
@@ -28,7 +28,7 @@ def format_summary(checks: List[dict]) -> str:
         out.append("\nFAILED:")
         out.extend(failed_lines)
 
-    out.append("\n" + "=" * 60 + "\n")
+    out.append("\n" + "-" * 60 + "\n")
     return "\n".join(out)
 
 
